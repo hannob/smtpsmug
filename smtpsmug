@@ -21,8 +21,7 @@ def send(msg):
 
 
 def send_mail_header():
-    # fixme: python does not like this without a timezone any more
-    maildate = email.utils.format_datetime(datetime.datetime.now())
+    maildate = email.utils.format_datetime(datetime.datetime.now(datetime.UTC))
     msgid = email.utils.make_msgid(domain=ehlo)
 
     recv()
