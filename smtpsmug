@@ -56,26 +56,29 @@ def send_mail_header():
     send("")
 
 
-def test_badend(badend_name, badend_value):
+def test_badend(badend_value):
     send_mail_header()
-    send(f"This is a test mail with an {badend_name} ending.")
+    send(f"This is a test mail with an {repr(badend_value)} ending.")
     sock.send(badend_value.encode())
     try:
         ret = recv()
     except TimeoutError:
-        print(f"Received timeout after 5 seconds when sending {badend_name}")
+        print(f"Received timeout after 5 seconds when sending {repr(badend_value)}")
         print("Finishing mail with <CR><LF>.<CR><LF>")
-        send(f"This is after a bad mail {badend_name} ending.")
-        sock.send(GOODEND.encode())
+        send(f"This is after a bad mail {repr(badend_value)} ending.")
+        sock.send("\r\n.\r\n".encode())
         if recv().startswith("250 "):
-            print(f"Successfully sent a mail with {badend_name} in it,")
+            print(f"Successfully sent a mail with {repr(badend_value)} in it,")
             print("but not accepted as a mail end.")
-            print("This should not happen, this should've been rejected.")
+            print("This probablby should've been rejected.")
+            print("You should analyze the result on the receiving side.")
         return
     if ret.startswith("250 "):
-        print(f"It appears {badend_name} was accepted (bad!)")
+        print(f"It appears {repr(badend_value)} was accepted (bad!)")
     else:
-        print(f"It appears server did not accept {badend_name}, that's probably good.")
+        print(
+            f"It appears server did not accept {repr(badend_value)}, that's probably good."
+        )
 
 
 ap = argparse.ArgumentParser()
@@ -86,6 +89,7 @@ ap.add_argument("-e", "--ehlo", help="Takes local part of mailfrom if not passed
 ap.add_argument("-u", "--user", help="Authenticate with username")
 ap.add_argument("-p", "--password", help="Authenticate with password")
 ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
+ap.add_argument("-c", "--test", default="lflf", help="Test to run")
 args = ap.parse_args()
 print(args)
 
@@ -109,14 +113,13 @@ else:
     psock.connect((args.host, 25))
     sock = psock
 
+tests = {
+    "lflf": "\n.\n",
+    "crcr": "\r.\r",
+    "crlf": "\r.\n",
+    "lfcr": "\n.\r",
+    "nullbefore": "\r\n\x00.\r\n",
+    "nullafter": "\r\n\x00.\r\n",
+}
 
-GOODEND = "\r\n.\r\n"
-BADEND_LFLF = "\n.\n"
-BADEND_CRCR = "\r.\r"
-BADEND_NULLBEFORE = "\r\n\x00.\r\n"
-BADEND_NULLAFTER = "\r\n\x00.\r\n"
-
-# test_badend("<CR><LF>.<NULL><CR><LF>", BADEND_NULLAFTER)
-# test_badend("<CR><LF><NULL>.<CR><LF>", BADEND_NULLBEFORE)
-test_badend("<LF>.<LF>", BADEND_LFLF)
-# test_badend("<CR>.<CR>", BADEND_CRCR)
+test_badend(tests[args.test])
