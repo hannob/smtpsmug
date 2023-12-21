@@ -1,0 +1,122 @@
+#!/usr/bin/python
+
+import argparse
+import base64
+import datetime
+import email.utils
+import socket
+import ssl
+import sys
+
+
+def recv():
+    ret = sock.recv(4096)
+    print(f"\033[1;34mRECV:\033[0;36m {ret.decode()}\033[0m")
+    return ret.decode()
+
+
+def send(msg):
+    print(f"\033[1;34mSEND:\033[0;33m {msg}\033[0m")
+    sock.send(f"{msg}\r\n".encode())
+
+
+def send_mail_header():
+    # fixme: python does not like this without a timezone any more
+    maildate = email.utils.format_datetime(datetime.datetime.now())
+    msgid = email.utils.make_msgid(domain=ehlo)
+
+    recv()
+    send(f"EHLO {ehlo}")
+    recv()
+
+    if args.user and args.password:
+        authplain = f"\x00{args.user}\x00{args.password}"
+        b64 = base64.b64encode(authplain.encode()).decode()
+        send(f"AUTH PLAIN {b64}")
+        if not recv().startswith("2"):
+            sys.exit("Authentication failed")
+
+    send(f"MAIL FROM:<{args.mailfrom}>")
+    r = recv()
+    if not r.startswith("2"):
+        sys.exit("Did not accept MAIL FROM")
+
+    send(f"RCPT TO:<{args.to}>")
+    r = recv()
+    if not r.startswith("2"):
+        sys.exit("Did not accept RCPT TO")
+
+    send("DATA")
+    recv()
+    send(f"From: {args.mailfrom}")
+    send(f"To: {args.to}")
+    send("Subject: Hello World")
+    send(f"Date: {maildate}")
+    send(f"Message-ID: {msgid}")
+    send("")
+
+
+def test_badend(badend_name, badend_value):
+    send_mail_header()
+    send(f"This is a test mail with an {badend_name} ending.")
+    sock.send(badend_value.encode())
+    try:
+        ret = recv()
+    except TimeoutError:
+        print(f"Received timeout after 5 seconds when sending {badend_name}")
+        print("Finishing mail with <CR><LF>.<CR><LF>")
+        send(f"This is after a bad mail {badend_name} ending.")
+        sock.send(GOODEND.encode())
+        if recv().startswith("250 "):
+            print(f"Successfully sent a mail with {badend_name} in it,")
+            print("but not accepted as a mail end.")
+            print("This should not happen, this should've been rejected.")
+        return
+    if ret.startswith("250 "):
+        print(f"It appears {badend_name} was accepted (bad!)")
+    else:
+        print(f"It appears server did not accept {badend_name}, that's probably good.")
+
+
+ap = argparse.ArgumentParser()
+ap.add_argument("host")
+ap.add_argument("-f", "--mailfrom", default="alice@example.org")
+ap.add_argument("-t", "--to", default="bob@example.org")
+ap.add_argument("-e", "--ehlo", help="Takes local part of mailfrom if not passed")
+ap.add_argument("-u", "--user", help="Authenticate with username")
+ap.add_argument("-p", "--password", help="Authenticate with password")
+ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
+args = ap.parse_args()
+print(args)
+
+if bool(args.user) != bool(args.password):
+    sys.exit("Need both user and password for authentication")
+
+if not args.ehlo:
+    ehlo = args.mailfrom.split("@")[-1]
+else:
+    ehlo = args.ehlo
+
+
+psock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+psock.settimeout(5)
+
+if args.tls:
+    psock.connect((args.host, 465))
+    context = ssl.create_default_context()
+    sock = context.wrap_socket(psock, server_hostname=args.host)
+else:
+    psock.connect((args.host, 25))
+    sock = psock
+
+
+GOODEND = "\r\n.\r\n"
+BADEND_LFLF = "\n.\n"
+BADEND_CRCR = "\r.\r"
+BADEND_NULLBEFORE = "\r\n\x00.\r\n"
+BADEND_NULLAFTER = "\r\n\x00.\r\n"
+
+# test_badend("<CR><LF>.<NULL><CR><LF>", BADEND_NULLAFTER)
+# test_badend("<CR><LF><NULL>.<CR><LF>", BADEND_NULLBEFORE)
+test_badend("<LF>.<LF>", BADEND_LFLF)
+# test_badend("<CR>.<CR>", BADEND_CRCR)
