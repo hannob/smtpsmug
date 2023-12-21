@@ -21,7 +21,7 @@ def send(msg):
 
 
 def send_mail_header():
-    maildate = email.utils.format_datetime(datetime.datetime.now(datetime.UTC))
+    maildate = email.utils.format_datetime(datetime.datetime.now())
     msgid = email.utils.make_msgid(domain=ehlo)
 
     recv()
