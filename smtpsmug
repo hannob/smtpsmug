@@ -191,7 +191,7 @@ if args.tls:
     context = ssl.create_default_context()
     sock = context.wrap_socket(psock, server_hostname=args.host)
 elif args.starttls:
-    psock.connect((args.host, 587))
+    psock.connect((args.host, port))
     context = ssl.create_default_context()
     send(f"EHLO {ehlo}", psock)
     recv(psock)
