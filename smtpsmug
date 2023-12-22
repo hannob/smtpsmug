@@ -101,7 +101,8 @@ def test_pipelining():
     r = recv()
 
     lines = r.splitlines()
-    if lines[-1].startswith("5") or lines[-2].startswith("5"):
+    xline = lines[-2] if len(lines) >= 2 else ""
+    if lines[-1].startswith("5") or xline.startswith("5"):
         print(
             "Server rejects bad protocol synchronization (if postfix: mitigation enabled)"
         )
