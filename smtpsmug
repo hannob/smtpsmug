@@ -8,14 +8,23 @@ import socket
 import ssl
 import sys
 
+sock = None
+starttls = False
 
-def recv():
+
+def recv(socky=None):
+    global sock
+    if socky is not None:
+        sock = socky
     ret = sock.recv(4096)
     print(f"\033[1;34mRECV:\033[0;36m {ret.decode()}\033[0m")
     return ret.decode()
 
 
-def send(msg):
+def send(msg, socky=None):
+    global sock
+    if socky is not None:
+        sock = socky
     print(f"\033[1;34mSEND:\033[0;33m {msg}\033[0m")
     sock.send(f"{msg}\r\n".encode())
 
@@ -23,8 +32,10 @@ def send(msg):
 def send_mail_header():
     maildate = email.utils.format_datetime(datetime.datetime.now())
     msgid = email.utils.make_msgid(domain=ehlo)
+    global starttls
+    if not starttls:
+        recv()
 
-    recv()
     send(f"EHLO {ehlo}")
     recv()
 
@@ -90,7 +101,7 @@ def test_pipelining():
     send(f"MAIL FROM:<{args.mailfrom}>")
     send(f"RCPT TO:<{args.to}>")
     send("DATA")
-    send(f"From: {args.mailfrom}")
+    send(f"From: {args.to}")
     send(f"To: {args.to}")
     send("Subject: Hello World 2")
     send(f"Date: {maildate}")
@@ -101,7 +112,10 @@ def test_pipelining():
     r = recv()
 
     lines = r.splitlines()
-    if lines[-1].startswith("5") or lines[-2].startswith("5"):
+    if len(lines) < 2:
+        print("Server might not support pipelining")
+        print("Check your email to see if it worked")
+    elif lines[-1].startswith("5") or lines[-2].startswith("5"):
         print(
             "Server rejects bad protocol synchronization (if postfix: mitigation enabled)"
         )
@@ -119,6 +133,7 @@ ap.add_argument("-e", "--ehlo", help="Takes local part of mailfrom if not passed
 ap.add_argument("-u", "--user", help="Authenticate with username")
 ap.add_argument("-p", "--password", help="Authenticate with password")
 ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
+ap.add_argument("-a", "--starttls", action="store_true", help="STARTTLS")
 ap.add_argument("-c", "--test", default="lflf", help="Test to run")
 ap.add_argument("--list-tests", action="store_true")
 args = ap.parse_args()
@@ -166,6 +181,18 @@ if args.tls:
     psock.connect((args.host, 465))
     context = ssl.create_default_context()
     sock = context.wrap_socket(psock, server_hostname=args.host)
+elif args.starttls:
+    psock.connect((args.host, 587))
+    context = ssl.create_default_context()
+    send(f"EHLO {ehlo}", psock)
+    recv(psock)
+    recv(psock)
+    send("STARTTLS", psock)
+    r = recv(socky=psock)
+    if not r.startswith("220 "):
+        sys.exit("STARTTLS not accepted")
+    sock = context.wrap_socket(psock, server_hostname=args.host)
+    starttls = True
 else:
     psock.connect((args.host, 25))
     sock = psock
