@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 import argparse
 import base64
@@ -112,15 +112,16 @@ def test_pipelining():
     r = recv()
 
     lines = r.splitlines()
-    if len(lines) < 2:
-        print("Server might not support pipelining")
-        print("Check your email to see if it worked")
-    elif lines[-1].startswith("5") or lines[-2].startswith("5"):
+    xline = lines[-2] if len(lines) >= 2 else ""
+    if lines[-1].startswith("5") or xline.startswith("5"):
         print(
             "Server rejects bad protocol synchronization (if postfix: mitigation enabled)"
         )
     elif lines[-1].startswith("2"):
-        print("Server accepts bad protocol synchronization")
+        print("Server accepts bad protocol synchronization.")
+        if args.user:
+            print("Note: The postfix mitigation is only enabled on unauthenticated")
+            print("connections, you tested with an authenticated connection.")
     else:
         print("Unsure how to interpret answer")
 
@@ -134,6 +135,7 @@ ap.add_argument("-u", "--user", help="Authenticate with username")
 ap.add_argument("-p", "--password", help="Authenticate with password")
 ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
 ap.add_argument("-a", "--starttls", action="store_true", help="STARTTLS")
+ap.add_argument("--port", type=int, help="Custom port")
 ap.add_argument("-c", "--test", default="lflf", help="Test to run")
 ap.add_argument("--list-tests", action="store_true")
 args = ap.parse_args()
@@ -163,10 +165,17 @@ if not args.host:
 if args.test not in tests:
     sys.exit("Invalid test")
 
-print(args)
 
 if bool(args.user) != bool(args.password):
     sys.exit("Need both user and password for authentication")
+
+print(args)
+
+port = 25
+if args.port:
+    port = args.port
+elif args.tls:
+    port = 465
 
 if not args.ehlo:
     ehlo = args.mailfrom.split("@")[-1]
@@ -178,7 +187,7 @@ psock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 psock.settimeout(5)
 
 if args.tls:
-    psock.connect((args.host, 465))
+    psock.connect((args.host, port))
     context = ssl.create_default_context()
     sock = context.wrap_socket(psock, server_hostname=args.host)
 elif args.starttls:
@@ -194,7 +203,7 @@ elif args.starttls:
     sock = context.wrap_socket(psock, server_hostname=args.host)
     starttls = True
 else:
-    psock.connect((args.host, 25))
+    psock.connect((args.host, port))
     sock = psock
 
 if args.test == "pipelining":
