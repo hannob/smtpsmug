@@ -107,7 +107,10 @@ def test_pipelining():
             "Server rejects bad protocol synchronization (if postfix: mitigation enabled)"
         )
     elif lines[-1].startswith("2"):
-        print("Server accepts bad protocol synchronization")
+        print("Server accepts bad protocol synchronization.")
+        if args.user:
+            print("Note: The postfix mitigation is only enabled on unauthenticated")
+            print("connections, you tested with an authenticated connection.")
     else:
         print("Unsure how to interpret answer")
 
