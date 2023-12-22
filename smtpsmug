@@ -101,7 +101,7 @@ def test_pipelining():
     send(f"MAIL FROM:<{args.mailfrom}>")
     send(f"RCPT TO:<{args.to}>")
     send("DATA")
-    send(f"From: {args.to}")
+    send(f"From: {args.mailfrom}")
     send(f"To: {args.to}")
     send("Subject: Hello World 2")
     send(f"Date: {maildate}")
