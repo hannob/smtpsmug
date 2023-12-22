@@ -80,6 +80,37 @@ def test_badend(badend_value):
         )
 
 
+def test_pipelining():
+    maildate = email.utils.format_datetime(datetime.datetime.now())
+    msgid = email.utils.make_msgid(domain=ehlo)
+
+    send_mail_header()
+    send("This is mail 1/2 to test pipelining")
+    sock.send("\r\n.\r\n".encode())
+    send(f"MAIL FROM:<{args.mailfrom}>")
+    send(f"RCPT TO:<{args.to}>")
+    send("DATA")
+    send(f"From: {args.mailfrom}")
+    send(f"To: {args.to}")
+    send("Subject: Hello World 2")
+    send(f"Date: {maildate}")
+    send(f"Message-ID: {msgid}")
+    send("")
+    send("This is mail 2/2 to test pipelining")
+    sock.send("\r\n.\r\n".encode())
+    r = recv()
+
+    lines = r.splitlines()
+    if lines[-1].startswith("5") or lines[-2].startswith("5"):
+        print(
+            "Server rejects bad protocol synchronization (if postfix: mitigation enabled)"
+        )
+    elif lines[-1].startswith("2"):
+        print("Server accepts bad protocol synchronization")
+    else:
+        print("Unsure how to interpret answer")
+
+
 ap = argparse.ArgumentParser()
 ap.add_argument("host", nargs="?")
 ap.add_argument("-f", "--mailfrom", default="alice@example.org")
@@ -99,16 +130,23 @@ tests = {
     "lfcr": "\n.\r",
     "nullbefore": "\r\n\x00.\r\n",
     "nullafter": "\r\n\x00.\r\n",
+    "pipelining": "Test whether server supports pipelining (Postfix mitigation)",
 }
 
 if args.list_tests:
     for k, v in tests.items():
-        print(f'"{k}:": Send malformed {repr(v)} end of DATA symbol')
+        if k == "pipelining":
+            print(f'"{k}:": {v}')
+        else:
+            print(f'"{k}:": Send malformed {repr(v)} end of DATA symbol')
     sys.exit(0)
 
 if not args.host:
     ap.print_help()
     sys.exit(0)
+
+if args.test not in tests:
+    sys.exit("Invalid test")
 
 print(args)
 
@@ -132,4 +170,7 @@ else:
     psock.connect((args.host, 25))
     sock = psock
 
-test_badend(tests[args.test])
+if args.test == "pipelining":
+    test_pipelining()
+else:
+    test_badend(tests[args.test])
