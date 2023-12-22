@@ -81,7 +81,7 @@ def test_badend(badend_value):
 
 
 ap = argparse.ArgumentParser()
-ap.add_argument("host")
+ap.add_argument("host", nargs="?")
 ap.add_argument("-f", "--mailfrom", default="alice@example.org")
 ap.add_argument("-t", "--to", default="bob@example.org")
 ap.add_argument("-e", "--ehlo", help="Takes local part of mailfrom if not passed")
@@ -89,7 +89,27 @@ ap.add_argument("-u", "--user", help="Authenticate with username")
 ap.add_argument("-p", "--password", help="Authenticate with password")
 ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
 ap.add_argument("-c", "--test", default="lflf", help="Test to run")
+ap.add_argument("--list-tests", action="store_true")
 args = ap.parse_args()
+
+tests = {
+    "lflf": "\n.\n",
+    "crcr": "\r.\r",
+    "crlf": "\r.\n",
+    "lfcr": "\n.\r",
+    "nullbefore": "\r\n\x00.\r\n",
+    "nullafter": "\r\n\x00.\r\n",
+}
+
+if args.list_tests:
+    for k, v in tests.items():
+        print(f'"{k}:": Send malformed {repr(v)} end of DATA symbol')
+    sys.exit(0)
+
+if not args.host:
+    ap.print_help()
+    sys.exit(0)
+
 print(args)
 
 if bool(args.user) != bool(args.password):
@@ -111,14 +131,5 @@ if args.tls:
 else:
     psock.connect((args.host, 25))
     sock = psock
-
-tests = {
-    "lflf": "\n.\n",
-    "crcr": "\r.\r",
-    "crlf": "\r.\n",
-    "lfcr": "\n.\r",
-    "nullbefore": "\r\n\x00.\r\n",
-    "nullafter": "\r\n\x00.\r\n",
-}
 
 test_badend(tests[args.test])
