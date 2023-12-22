@@ -176,6 +176,8 @@ if args.port:
     port = args.port
 elif args.tls:
     port = 465
+elif args.starttls:
+    port = 587
 
 if not args.ehlo:
     ehlo = args.mailfrom.split("@")[-1]
