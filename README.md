@@ -27,11 +27,12 @@ There are multiple behaviors of mail servers that enable the vulnerability:
   or '\n' characters and always answer with an error if they see them not in the '\r\n'
   combination. It appears some mail servers will accept such characters, but transform
   them to '\r\n', and safely escape dots via dot stuffing. Rejecting them seems safer.
-  The RFC states: "SMTP client implementations MUST NOT transmit these characters except
-  when they are intended as line terminators and then MUST, as indicated above, transmit
-  them only as a <CRLF> sequence." This appears clear that conforming clients must not
-  send such stray characters, but it does not explicitly say what receiving servers
-  should do in such a case.
+  [RFC 5321, section 3.2.8](https://datatracker.ietf.org/doc/html/rfc5321#section-2.3.8)
+  states: "SMTP client implementations MUST NOT transmit these characters except when
+  they are intended as line terminators and then MUST, as indicated above, transmit them
+  only as a <CRLF> sequence." This appears clear that conforming clients must not send
+  such stray characters, but it does not explicitly say what receiving servers should do
+  in such a case.
 
 # context
 
