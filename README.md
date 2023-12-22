@@ -13,10 +13,7 @@ By default, `smtpsmug` will send a test mail ending with a '\n.\n' symbol (Unix 
 instead of Windows '\r\n' newlines). It supports multiple other malformed endings. Use
 `--list-tests` to show them, `--test [testname]` to select one.
 
-Please note that this script does currently not test whether servers support pipelining.
-Postfix recommends to disable pipelining for unauthenticated connections, which mitigates
-the vulnerability. This is a temporary mitigation, and it is what you probably should
-do for the time being, but it is not the purpose of this script to test for that.
+To test the postfix mitigation, there is now a `pipelining` test. (May be unstable.)
 
 There are multiple behaviors of mail servers that enable the vulnerability:
 
