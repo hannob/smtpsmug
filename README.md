@@ -18,7 +18,7 @@ To test the postfix mitigation, there is now a `pipelining` test. (May be unstab
 There are multiple behaviors of mail servers that enable the vulnerability:
 
 * Mail servers accept malformed endings. This is in all cases a bug and a violation of
-  [RFC 5321, section 4.4.1](https://www.rfc-editor.org/rfc/rfc5321#section-4.1.4).
+  [RFC 5321, section 4.1.1.4](https://www.rfc-editor.org/rfc/rfc5321#section-4.1.1.4).
 
 * Mail servers accept malformed endings within mails and forward them to other mail
   servers. To test this, you need to monitor the receiving side. (The
