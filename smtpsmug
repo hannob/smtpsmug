@@ -138,7 +138,7 @@ tests = {
     "crcrlf": "\r.\r\n",
     "crlfcr": "\r\n.\r",
     "nullbefore": "\r\n\x00.\r\n",
-    "nullafter": "\r\n\x00.\r\n",
+    "nullafter": "\r\n.\x00\r\n",
     "pipelining": "Test whether server supports pipelining (Postfix mitigation)",
 }
 
