@@ -21,7 +21,7 @@ def send(msg):
 
 
 def send_mail_header():
-    maildate = email.utils.format_datetime(datetime.datetime.now())
+    maildate = email.utils.format_datetime(datetime.datetime.now(tz=datetime.UTC))
     msgid = email.utils.make_msgid(domain=ehlo)
 
     recv()
@@ -57,36 +57,36 @@ def send_mail_header():
 
 def test_badend(badend_value):
     send_mail_header()
-    send(f"This is a test mail with an {repr(badend_value)} ending.")
+    send(f"This is a test mail with an {badend_value!r} ending.")
     sock.send(badend_value.encode())
     try:
         ret = recv()
     except TimeoutError:
-        print(f"Received timeout after 5 seconds when sending {repr(badend_value)}")
+        print(f"Received timeout after 5 seconds when sending {badend_value!r}")
         print("Finishing mail with <CR><LF>.<CR><LF>")
-        send(f"This is after a bad mail {repr(badend_value)} ending.")
-        sock.send("\r\n.\r\n".encode())
+        send(f"This is after a bad mail {badend_value!r} ending.")
+        sock.send(b"\r\n.\r\n")
         if recv().startswith("250 "):
-            print(f"Successfully sent a mail with {repr(badend_value)} in it,")
+            print(f"Successfully sent a mail with {badend_value!r} in it,")
             print("but not accepted as a mail end.")
             print("This probablby should've been rejected.")
             print("You should analyze the result on the receiving side.")
         return
     if ret.startswith("250 "):
-        print(f"It appears {repr(badend_value)} was accepted (bad!)")
+        print(f"It appears {badend_value!r} was accepted (bad!)")
     else:
         print(
-            f"It appears server did not accept {repr(badend_value)}, that's probably good."
+            f"It appears server did not accept {badend_value!r}, that's probably good."
         )
 
 
 def test_pipelining():
-    maildate = email.utils.format_datetime(datetime.datetime.now())
+    maildate = email.utils.format_datetime(datetime.datetime.now(tz=datetime.UTC))
     msgid = email.utils.make_msgid(domain=ehlo)
 
     send_mail_header()
     send("This is mail 1/2 to test pipelining")
-    sock.send("\r\n.\r\n".encode())
+    sock.send(b"\r\n.\r\n")
     send(f"MAIL FROM:<{args.mailfrom}>")
     send(f"RCPT TO:<{args.to}>")
     send("DATA")
@@ -97,7 +97,7 @@ def test_pipelining():
     send(f"Message-ID: {msgid}")
     send("")
     send("This is mail 2/2 to test pipelining")
-    sock.send("\r\n.\r\n".encode())
+    sock.send(b"\r\n.\r\n")
     r = recv()
 
     lines = r.splitlines()
@@ -147,7 +147,7 @@ if args.list_tests:
         if k == "pipelining":
             print(f'"{k}:": {v}')
         else:
-            print(f'"{k}:": Send malformed {repr(v)} end of DATA symbol')
+            print(f'"{k}:": Send malformed {v!r} end of DATA symbol')
     sys.exit(0)
 
 if not args.host:
