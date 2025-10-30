@@ -126,6 +126,7 @@ ap.add_argument("-s", "--tls", action="store_true", help="TLS/SMTPS (port 465)")
 ap.add_argument("--port", type=int, help="Custom port")
 ap.add_argument("-c", "--test", default="lflf", help="Test to run")
 ap.add_argument("--list-tests", action="store_true")
+ap.add_argument("--timeout", type=int, default=10, help="Socket timeout in seconds")
 args = ap.parse_args()
 
 tests = {
@@ -176,7 +177,7 @@ else:
 
 
 psock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-psock.settimeout(5)
+psock.settimeout(args.timeout)
 
 if args.tls:
     psock.connect((args.host, port))
